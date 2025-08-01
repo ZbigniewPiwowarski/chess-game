@@ -111,7 +111,8 @@
             board: {},
             selectedSquare: null,
             currentPlayer: 'white',
-            moveHistory: []
+            moveHistory: [],
+            lastMoveWasCheck: false
         };
         
         // Inicjalizacja planszy
@@ -459,6 +460,21 @@
             const possibleMoves = getPossibleMoves(from);
             if (!possibleMoves.includes(to)) return false;
             
+            // Sprawdź czy król zostanie zbity (przed wykonaniem ruchu)
+            const capturedPiece = gameState.board[to];
+            if (capturedPiece) {
+                const pieceType = getPieceType(capturedPiece);
+                if (pieceType === 'king') {
+                    // Wykonaj ruch
+                    gameState.board[to] = piece;
+                    delete gameState.board[from];
+                    
+                    console.log(`SZACH-MAT! Król został zbity! ${gameState.currentPlayer} wygrywa!`);
+                    updateGameStatus('checkmate', gameState.currentPlayer);
+                    return true;
+                }
+            }
+            
             // Wykonaj ruch
             gameState.board[to] = piece;
             delete gameState.board[from];
@@ -478,9 +494,17 @@
             const opponentColor = gameState.currentPlayer === 'white' ? 'black' : 'white';
             if (isCheck(opponentColor)) {
                 console.log(`SZACH! ${opponentColor} jest w szachu!`);
-                updateGameStatus('check', opponentColor);
+                // Sprawdź czy to szach-mat (kolejny szach po ruchu)
+                if (gameState.lastMoveWasCheck) {
+                    console.log(`SZACH-MAT! ${gameState.currentPlayer} wygrywa!`);
+                    updateGameStatus('checkmate', gameState.currentPlayer);
+                } else {
+                    updateGameStatus('check', opponentColor);
+                    gameState.lastMoveWasCheck = true;
+                }
             } else {
                 updateGameStatus('playing');
+                gameState.lastMoveWasCheck = false;
             }
             
             // Zmień gracza
@@ -505,6 +529,10 @@
                 case 'check':
                     statusText = `SZACH! ${color === 'white' ? 'Białe' : 'Czarne'} są w szachu!`;
                     statusColor = '#ff6600';
+                    break;
+                case 'checkmate':
+                    statusText = `SZACH-MAT! ${color === 'white' ? 'Białe' : 'Czarne'} wygrywają!`;
+                    statusColor = '#ff0000';
                     break;
 
             }
