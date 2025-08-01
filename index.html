@@ -12,6 +12,7 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            padding: 10px;
             background-color: #f0f0f0;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
@@ -19,19 +20,21 @@
 
         .chessboard {
             display: grid;
-            grid-template-columns: repeat(8, 60px);
-            grid-template-rows: repeat(8, 60px);
+            grid-template-columns: repeat(8, min(12vw, 60px));
+            grid-template-rows: repeat(8, min(12vw, 60px));
             border: 2px solid #333;
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            width: min(96vw, 480px);
+            height: min(96vw, 480px);
         }
 
         .square {
-            width: 60px;
-            height: 60px;
+            width: min(12vw, 60px);
+            height: min(12vw, 60px);
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 12px;
+            font-size: min(4vw, 12px);
             color: #666;
         }
 
@@ -410,7 +413,7 @@
                     
                     if (piece) {
                         square.textContent = piece;
-                        square.style.fontSize = '45px';
+                        square.style.fontSize = 'min(10vw, 45px)';
                         square.style.fontWeight = '900';
                         square.style.fontFamily = 'Arial Unicode MS, Arial, sans-serif';
                         if (isWhitePiece(piece)) {
@@ -422,8 +425,11 @@
                         }
                     } else {
                         square.textContent = position;
-                        square.style.fontSize = '12px';
+                        square.style.fontSize = 'min(4vw, 12px)';
                         square.style.color = '#666';
+                        square.style.fontWeight = 'normal';
+                        square.style.textShadow = 'none';
+                        square.style.fontFamily = 'inherit';
                     }
                 }
             }
@@ -481,7 +487,7 @@
                 // Dodaj figurę jeśli istnieje na tej pozycji
                 if (gameState.board[squareId]) {
                     square.textContent = gameState.board[squareId];
-                    square.style.fontSize = '45px';
+                    square.style.fontSize = 'min(10vw, 45px)';
                     square.style.fontWeight = '900';
                     square.style.fontFamily = 'Arial Unicode MS, Arial, sans-serif';
                     const piece = gameState.board[squareId];
@@ -494,8 +500,11 @@
                     }
                 } else {
                     square.textContent = squareId;
-                    square.style.fontSize = '12px';
+                    square.style.fontSize = 'min(4vw, 12px)';
                     square.style.color = '#666';
+                    square.style.fontWeight = 'normal';
+                    square.style.textShadow = 'none';
+                    square.style.fontFamily = 'inherit';
                 }
                 
                 // Dodaj obsługę kliknięć
