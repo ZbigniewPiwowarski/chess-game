@@ -62,11 +62,20 @@
             color: #333;
             font-size: 24px;
         }
+
+        .game-status {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 </head>
 <body>
     <div>
-        <h1 class="title">Szachy - Krok 1: Szachownica</h1>
+        <h1 class="title">Szachy - Gra</h1>
+        <div class="game-status" id="gameStatus">Białe zaczynają</div>
         <div class="board-container">
             <div class="chessboard" id="chessboard">
                 <!-- Szachownica będzie generowana przez JavaScript -->
@@ -204,6 +213,70 @@
                 }
             }
             return null;
+        }
+        
+        // Znajdź pozycję króla
+        function findKing(color) {
+            const kingSymbol = color === 'white' ? pieces.white.king : pieces.black.king;
+            for (const [position, piece] of Object.entries(gameState.board)) {
+                if (piece === kingSymbol) {
+                    return position;
+                }
+            }
+            return null;
+        }
+        
+        // Sprawdź czy ruch jest legalny (nie zostawia króla w szachu)
+        function isLegalMove(from, to) {
+            const piece = gameState.board[from];
+            const originalTo = gameState.board[to];
+            const originalFrom = gameState.board[from];
+            
+            // Wykonaj tymczasowy ruch
+            gameState.board[to] = piece;
+            delete gameState.board[from];
+            
+            // Sprawdź czy król jest w szachu
+            const playerColor = isWhitePiece(piece) ? 'white' : 'black';
+            const isKingInCheck = isCheck(playerColor);
+            
+            // Cofnij ruch
+            gameState.board[from] = originalFrom;
+            gameState.board[to] = originalTo;
+            
+            return !isKingInCheck;
+        }
+        
+        // Sprawdź czy gracz ma legalne ruchy
+        function hasLegalMoves(color) {
+            for (const [position, piece] of Object.entries(gameState.board)) {
+                if (isPieceOfPlayer(piece, color)) {
+                    const possibleMoves = getPossibleMoves(position);
+                    for (const move of possibleMoves) {
+                        if (isLegalMove(position, move)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        
+        // Sprawdź czy król jest w szachu
+        function isCheck(color) {
+            const kingPosition = findKing(color);
+            if (!kingPosition) return false;
+            
+            const opponentColor = color === 'white' ? 'black' : 'white';
+            for (const [position, piece] of Object.entries(gameState.board)) {
+                if (isPieceOfPlayer(piece, opponentColor)) {
+                    const possibleMoves = getPossibleMoves(position);
+                    if (possibleMoves.includes(kingPosition)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
         
         // Sprawdź czy ścieżka jest wolna (dla wieży, gońca, hetmana)
@@ -390,6 +463,26 @@
             gameState.board[to] = piece;
             delete gameState.board[from];
             
+            // Sprawdź promocję pionka
+            const pieceType = getPieceType(piece);
+            if (pieceType === 'pawn') {
+                const toCoords = positionToCoords(to);
+                if ((isWhitePiece(piece) && toCoords.rank === 0) || 
+                    (isBlackPiece(piece) && toCoords.rank === 7)) {
+                    // Promocja pionka - na razie na hetmana (można rozszerzyć)
+                    gameState.board[to] = isWhitePiece(piece) ? pieces.white.queen : pieces.black.queen;
+                }
+            }
+            
+            // Sprawdź czy przeciwnik jest w szachu (przed zmianą gracza)
+            const opponentColor = gameState.currentPlayer === 'white' ? 'black' : 'white';
+            if (isCheck(opponentColor)) {
+                console.log(`SZACH! ${opponentColor} jest w szachu!`);
+                updateGameStatus('check', opponentColor);
+            } else {
+                updateGameStatus('playing');
+            }
+            
             // Zmień gracza
             gameState.currentPlayer = gameState.currentPlayer === 'white' ? 'black' : 'white';
             
@@ -397,6 +490,27 @@
             gameState.moveHistory.push({ from, to, piece });
             
             return true;
+        }
+        
+        // Aktualizuj status gry
+        function updateGameStatus(status, color = null) {
+            const statusElement = document.getElementById('gameStatus');
+            let statusText = '';
+            let statusColor = '#333';
+            
+            switch (status) {
+                case 'playing':
+                    statusText = `${gameState.currentPlayer === 'white' ? 'Białe' : 'Czarne'} grają`;
+                    break;
+                case 'check':
+                    statusText = `SZACH! ${color === 'white' ? 'Białe' : 'Czarne'} są w szachu!`;
+                    statusColor = '#ff6600';
+                    break;
+
+            }
+            
+            statusElement.textContent = statusText;
+            statusElement.style.color = statusColor;
         }
         
         // Aktualizuj wyświetlanie
