@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szachy - Krok 1</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            border: 2px solid #333;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .white {
+            background-color: #f0d9b5;
+        }
+
+        .black {
+            background-color: #b58863;
+        }
+
+        .coordinates {
+            position: absolute;
+            font-size: 10px;
+            color: #333;
+        }
+
+        .board-container {
+            position: relative;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1 class="title">Szachy - Krok 1: Szachownica</h1>
+        <div class="board-container">
+            <div class="chessboard" id="chessboard">
+                <!-- Szachownica będzie generowana przez JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chessboard = document.getElementById('chessboard');
+        
+        // Symbole figur szachowych
+        const pieces = {
+            white: {
+                king: '♔',
+                queen: '♕',
+                rook: '♖',
+                bishop: '♗',
+                knight: '♘',
+                pawn: '♙'
+            },
+            black: {
+                king: '♚',
+                queen: '♛',
+                rook: '♜',
+                bishop: '♝',
+                knight: '♞',
+                pawn: '♟'
+            }
+        };
+        
+        // Stan gry
+        let gameState = {
+            board: {},
+            selectedSquare: null,
+            currentPlayer: 'white',
+            moveHistory: []
+        };
+        
+        // Inicjalizacja planszy
+        function initializeBoard() {
+            gameState.board = {
+                'a1': pieces.white.rook,
+                'b1': pieces.white.knight,
+                'c1': pieces.white.bishop,
+                'd1': pieces.white.queen,
+                'e1': pieces.white.king,
+                'f1': pieces.white.bishop,
+                'g1': pieces.white.knight,
+                'h1': pieces.white.rook,
+                'a2': pieces.white.pawn,
+                'b2': pieces.white.pawn,
+                'c2': pieces.white.pawn,
+                'd2': pieces.white.pawn,
+                'e2': pieces.white.pawn,
+                'f2': pieces.white.pawn,
+                'g2': pieces.white.pawn,
+                'h2': pieces.white.pawn,
+                'a8': pieces.black.rook,
+                'b8': pieces.black.knight,
+                'c8': pieces.black.bishop,
+                'd8': pieces.black.queen,
+                'e8': pieces.black.king,
+                'f8': pieces.black.bishop,
+                'g8': pieces.black.knight,
+                'h8': pieces.black.rook,
+                'a7': pieces.black.pawn,
+                'b7': pieces.black.pawn,
+                'c7': pieces.black.pawn,
+                'd7': pieces.black.pawn,
+                'e7': pieces.black.pawn,
+                'f7': pieces.black.pawn,
+                'g7': pieces.black.pawn,
+                'h7': pieces.black.pawn
+            };
+        }
+        
+        // Sprawdź czy figura jest biała
+        function isWhitePiece(piece) {
+            return Object.values(pieces.white).includes(piece);
+        }
+        
+        // Sprawdź czy figura jest czarna
+        function isBlackPiece(piece) {
+            return Object.values(pieces.black).includes(piece);
+        }
+        
+        // Sprawdź czy figura należy do gracza
+        function isPieceOfPlayer(piece, player) {
+            return player === 'white' ? isWhitePiece(piece) : isBlackPiece(piece);
+        }
+        
+        // Konwertuj pozycję na współrzędne
+        function positionToCoords(position) {
+            const file = position.charCodeAt(0) - 97; // a=0, b=1, etc.
+            const rank = 8 - parseInt(position[1]);
+            return { file, rank };
+        }
+        
+        // Konwertuj współrzędne na pozycję
+        function coordsToPosition(file, rank) {
+            const fileChar = String.fromCharCode(97 + file);
+            const rankNum = 8 - rank;
+            return fileChar + rankNum;
+        }
+        
+        // Sprawdź czy pozycja jest na planszy
+        function isValidPosition(file, rank) {
+            return file >= 0 && file < 8 && rank >= 0 && rank < 8;
+        }
+        
+        // Sprawdź czy pole jest puste
+        function isEmptySquare(position) {
+            return !gameState.board[position];
+        }
+        
+        // Sprawdź czy pole ma przeciwną figurę
+        function hasOpponentPiece(position, player) {
+            const piece = gameState.board[position];
+            if (!piece) return false;
+            return player === 'white' ? isBlackPiece(piece) : isWhitePiece(piece);
+        }
+        
+        // Sprawdź czy pole ma własną figurę
+        function hasOwnPiece(position, player) {
+            const piece = gameState.board[position];
+            if (!piece) return false;
+            return isPieceOfPlayer(piece, player);
+        }
+        
+        // Pobierz typ figury
+        function getPieceType(piece) {
+            for (const color of ['white', 'black']) {
+                for (const [type, symbol] of Object.entries(pieces[color])) {
+                    if (symbol === piece) return type;
+                }
+            }
+            return null;
+        }
+        
+        // Sprawdź czy ścieżka jest wolna (dla wieży, gońca, hetmana)
+        function isPathClear(from, to) {
+            const fromCoords = positionToCoords(from);
+            const toCoords = positionToCoords(to);
+            
+            const fileDir = Math.sign(toCoords.file - fromCoords.file);
+            const rankDir = Math.sign(toCoords.rank - fromCoords.rank);
+            
+            let currentFile = fromCoords.file + fileDir;
+            let currentRank = fromCoords.rank + rankDir;
+            
+            while (currentFile !== toCoords.file || currentRank !== toCoords.rank) {
+                const position = coordsToPosition(currentFile, currentRank);
+                if (!isEmptySquare(position)) return false;
+                currentFile += fileDir;
+                currentRank += rankDir;
+            }
+            
+            return true;
+        }
+        
+        // Pobierz możliwe ruchy dla figury
+        function getPossibleMoves(position) {
+            const piece = gameState.board[position];
+            if (!piece) return [];
+            
+            const player = isWhitePiece(piece) ? 'white' : 'black';
+            const pieceType = getPieceType(piece);
+            const coords = positionToCoords(position);
+            const moves = [];
+            
+            switch (pieceType) {
+                case 'pawn':
+                    const direction = player === 'white' ? -1 : 1;
+                    const startRank = player === 'white' ? 6 : 1;
+                    
+                    // Ruch do przodu
+                    const forward = coordsToPosition(coords.file, coords.rank + direction);
+                    if (isValidPosition(coords.file, coords.rank + direction) && isEmptySquare(forward)) {
+                        moves.push(forward);
+                        
+                        // Podwójny ruch z pozycji startowej
+                        if (coords.rank === startRank) {
+                            const doubleForward = coordsToPosition(coords.file, coords.rank + 2 * direction);
+                            if (isEmptySquare(doubleForward)) {
+                                moves.push(doubleForward);
+                            }
+                        }
+                    }
+                    
+                    // Bicie po skosie
+                    for (const fileOffset of [-1, 1]) {
+                        const captureFile = coords.file + fileOffset;
+                        const captureRank = coords.rank + direction;
+                        if (isValidPosition(captureFile, captureRank)) {
+                            const capturePosition = coordsToPosition(captureFile, captureRank);
+                            if (hasOpponentPiece(capturePosition, player)) {
+                                moves.push(capturePosition);
+                            }
+                        }
+                    }
+                    break;
+                    
+                case 'rook':
+                    // Ruchy poziome i pionowe
+                    for (const direction of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+                        let file = coords.file + direction[0];
+                        let rank = coords.rank + direction[1];
+                        
+                        while (isValidPosition(file, rank)) {
+                            const targetPosition = coordsToPosition(file, rank);
+                            if (isEmptySquare(targetPosition)) {
+                                moves.push(targetPosition);
+                            } else if (hasOpponentPiece(targetPosition, player)) {
+                                moves.push(targetPosition);
+                                break;
+                            } else {
+                                break;
+                            }
+                            file += direction[0];
+                            rank += direction[1];
+                        }
+                    }
+                    break;
+                    
+                case 'bishop':
+                    // Ruchy po skosie
+                    for (const direction of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+                        let file = coords.file + direction[0];
+                        let rank = coords.rank + direction[1];
+                        
+                        while (isValidPosition(file, rank)) {
+                            const targetPosition = coordsToPosition(file, rank);
+                            if (isEmptySquare(targetPosition)) {
+                                moves.push(targetPosition);
+                            } else if (hasOpponentPiece(targetPosition, player)) {
+                                moves.push(targetPosition);
+                                break;
+                            } else {
+                                break;
+                            }
+                            file += direction[0];
+                            rank += direction[1];
+                        }
+                    }
+                    break;
+                    
+                case 'queen':
+                    // Kombinacja ruchów wieży i gońca
+                    for (const direction of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+                        let file = coords.file + direction[0];
+                        let rank = coords.rank + direction[1];
+                        
+                        while (isValidPosition(file, rank)) {
+                            const targetPosition = coordsToPosition(file, rank);
+                            if (isEmptySquare(targetPosition)) {
+                                moves.push(targetPosition);
+                            } else if (hasOpponentPiece(targetPosition, player)) {
+                                moves.push(targetPosition);
+                                break;
+                            } else {
+                                break;
+                            }
+                            file += direction[0];
+                            rank += direction[1];
+                        }
+                    }
+                    break;
+                    
+                case 'king':
+                    // Ruchy króla (bez roszady na razie)
+                    for (const fileOffset of [-1, 0, 1]) {
+                        for (const rankOffset of [-1, 0, 1]) {
+                            if (fileOffset === 0 && rankOffset === 0) continue;
+                            
+                            const targetFile = coords.file + fileOffset;
+                            const targetRank = coords.rank + rankOffset;
+                            
+                            if (isValidPosition(targetFile, targetRank)) {
+                                const targetPosition = coordsToPosition(targetFile, targetRank);
+                                if (isEmptySquare(targetPosition) || hasOpponentPiece(targetPosition, player)) {
+                                    moves.push(targetPosition);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                    
+                case 'knight':
+                    // Ruchy skoczka
+                    const knightMoves = [
+                        [-2, -1], [-2, 1], [-1, -2], [-1, 2],
+                        [1, -2], [1, 2], [2, -1], [2, 1]
+                    ];
+                    
+                    for (const [fileOffset, rankOffset] of knightMoves) {
+                        const targetFile = coords.file + fileOffset;
+                        const targetRank = coords.rank + rankOffset;
+                        
+                        if (isValidPosition(targetFile, targetRank)) {
+                            const targetPosition = coordsToPosition(targetFile, targetRank);
+                            if (isEmptySquare(targetPosition) || hasOpponentPiece(targetPosition, player)) {
+                                moves.push(targetPosition);
+                            }
+                        }
+                    }
+                    break;
+            }
+            
+            return moves;
+        }
+        
+        // Wykonaj ruch
+        function makeMove(from, to) {
+            const piece = gameState.board[from];
+            if (!piece) return false;
+            
+            const possibleMoves = getPossibleMoves(from);
+            if (!possibleMoves.includes(to)) return false;
+            
+            // Wykonaj ruch
+            gameState.board[to] = piece;
+            delete gameState.board[from];
+            
+            // Zmień gracza
+            gameState.currentPlayer = gameState.currentPlayer === 'white' ? 'black' : 'white';
+            
+            // Dodaj do historii
+            gameState.moveHistory.push({ from, to, piece });
+            
+            return true;
+        }
+        
+        // Aktualizuj wyświetlanie
+        function updateDisplay() {
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const position = coordsToPosition(col, row);
+                    const square = document.getElementById(position);
+                    const piece = gameState.board[position];
+                    
+                    // Usuń poprzednie style
+                    square.style.backgroundColor = '';
+                    square.style.border = '';
+                    
+                    if (piece) {
+                        square.textContent = piece;
+                        square.style.fontSize = '45px';
+                        square.style.fontWeight = '900';
+                        square.style.fontFamily = 'Arial Unicode MS, Arial, sans-serif';
+                        if (isWhitePiece(piece)) {
+                            square.style.color = '#ffffff';
+                            square.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
+                        } else {
+                            square.style.color = '#000000';
+                            square.style.textShadow = '2px 2px 4px rgba(255,255,255,0.8)';
+                        }
+                    } else {
+                        square.textContent = position;
+                        square.style.fontSize = '12px';
+                        square.style.color = '#666';
+                    }
+                }
+            }
+        }
+        
+        // Obsługa kliknięć
+        function handleSquareClick(position) {
+            const piece = gameState.board[position];
+            const square = document.getElementById(position);
+            
+            // Jeśli nic nie jest wybrane
+            if (!gameState.selectedSquare) {
+                // Sprawdź czy kliknięta figura należy do aktualnego gracza
+                if (piece && isPieceOfPlayer(piece, gameState.currentPlayer)) {
+                    gameState.selectedSquare = position;
+                    square.style.backgroundColor = '#ffff00';
+                    square.style.border = '3px solid #ff0000';
+                    
+                    // Pokaż możliwe ruchy
+                    const possibleMoves = getPossibleMoves(position);
+                    for (const move of possibleMoves) {
+                        const moveSquare = document.getElementById(move);
+                        moveSquare.style.backgroundColor = '#90EE90';
+                        moveSquare.style.border = '2px solid #32CD32';
+                    }
+                }
+            } else {
+                // Jeśli pole jest już wybrane
+                if (position === gameState.selectedSquare) {
+                    // Odznacz
+                    gameState.selectedSquare = null;
+                    updateDisplay();
+                } else {
+                    // Spróbuj wykonać ruch
+                    if (makeMove(gameState.selectedSquare, position)) {
+                        updateDisplay();
+                    }
+                    gameState.selectedSquare = null;
+                    updateDisplay();
+                }
+            }
+        }
+        
+        // Inicjalizacja
+        initializeBoard();
+        
+        // Generowanie szachownicy z figurami
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const square = document.createElement('div');
+                square.className = `square ${(row + col) % 2 === 0 ? 'white' : 'black'}`;
+                const squareId = coordsToPosition(col, row);
+                square.id = squareId;
+                
+                // Dodaj figurę jeśli istnieje na tej pozycji
+                if (gameState.board[squareId]) {
+                    square.textContent = gameState.board[squareId];
+                    square.style.fontSize = '45px';
+                    square.style.fontWeight = '900';
+                    square.style.fontFamily = 'Arial Unicode MS, Arial, sans-serif';
+                    const piece = gameState.board[squareId];
+                    if (isWhitePiece(piece)) {
+                        square.style.color = '#ffffff';
+                        square.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
+                    } else {
+                        square.style.color = '#000000';
+                        square.style.textShadow = '2px 2px 4px rgba(255,255,255,0.8)';
+                    }
+                } else {
+                    square.textContent = squareId;
+                    square.style.fontSize = '12px';
+                    square.style.color = '#666';
+                }
+                
+                // Dodaj obsługę kliknięć
+                square.addEventListener('click', () => handleSquareClick(squareId));
+                
+                chessboard.appendChild(square);
+            }
+        }
+    </script>
+</body>
+</html> 
